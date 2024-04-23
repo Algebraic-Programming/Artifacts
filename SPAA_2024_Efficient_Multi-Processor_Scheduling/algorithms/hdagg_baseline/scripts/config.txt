@@ -1,0 +1,18 @@
+%%% The running mode can be "File", "Dir", or "Combine"
+%%% Uncomment exactly one of the following three parameter assignment lines
+
+%%% "File" mode: runs the algorithms on a single problem instance
+%File = ../instances/File = ../instances/instance_CG_N4_K2_nzP0d5_p4_g1_l5.txt
+
+%%% "Dir" mode: runs the algorithms on all files in a given directory
+Dir = ../instances
+
+%%% "Combine" mode: combines the DAG and machine description files from two directories
+%Combine = ../merge1 ../merge2
+
+
+%%% "TimeLimit" parameter: sets the time limit (in minutes) for the HC+HCcs and ILPcs algorithms 
+TimeLimit = 2
+
+%%% Turns on multilevel mode
+%Contract = True

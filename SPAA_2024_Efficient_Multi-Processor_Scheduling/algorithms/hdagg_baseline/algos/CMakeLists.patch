@@ -1,0 +1,22 @@
+--- CMakeLists.txt	2024-04-22 13:55:05.795264182 +0200
++++ CMakeLists_new.txt	2024-04-22 13:52:38.323354596 +0200
+@@ -108,10 +108,12 @@
+ if(METIS_FOUND)
+ target_link_libraries(lbc_demo
+         lbc
++        aggregation
+         metis::metis
+         )
+ else()
+ target_link_libraries(lbc_demo
++        aggregation
+         lbc)
+ endif()
+ 
+@@ -128,4 +130,4 @@
+ target_link_libraries(Hdagg_SpTRSV PUBLIC
+         aggregation
+         metis::metis)
+-################################################################################
+\ No newline at end of file
++################################################################################

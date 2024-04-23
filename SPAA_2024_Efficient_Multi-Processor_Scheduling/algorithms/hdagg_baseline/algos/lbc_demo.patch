@@ -1,0 +1,103 @@
+--- lbc_demo.cpp	2024-04-19 14:55:25.804855000 +0200
++++ lbc_demo_new.cpp	2024-04-19 14:59:03.285872386 +0200
+@@ -6,10 +6,12 @@
+ #define CSV_LOG
+ 
+ #include <iostream>
++#include <vector>
+ #include "aggregation/sparse_io.h"
+ #include "aggregation/test_utils.h"
+ #include "aggregation/sparse_utilities.h"
+ #include "aggregation/lbc.h"
++#include "aggregation/hdagg.h"
+ 
+ #ifdef METIS
+ #include "aggregation/metis_interface.h"
+@@ -58,16 +60,18 @@
+   n = L1_csc->n;
+  }
+  if(argc >= 3)
+-  p2 = atoi(argv[2]);
++  num_threads = atoi(argv[2]);
+  if(argc >= 4)
+   p3 = atoi(argv[3]);
+  /// Re-ordering L matrix
+ #ifdef METIS
+  //We only reorder L since dependency matters more in l-solve.
+  //perm = new int[n]();
+- CSC *L1_csc_full = make_full(L1_csc);
++ /*CSC *L1_csc_full = make_full(L1_csc);
+  delete L1_csc;
+  metis_perm_general(L1_csc_full, perm);
++ for (int i = 0; i < n; ++i)
++ 	std::cout<<i<<": "<<perm[i]<<std::endl;
+  L1_csc = make_half(L1_csc_full->n, L1_csc_full->p, L1_csc_full->i,
+                     L1_csc_full->x);
+  CSC *Lt = transpose_symmetric(L1_csc, perm);
+@@ -76,32 +80,56 @@
+  L1_csc = L1_ord;
+  delete Lt;
+  delete L1_csc_full;
+- delete[]perm;
++ delete[]perm;*/
+ #endif
+ 
+ 
+- int final_level_no, *fina_level_ptr, *final_part_ptr, *final_node_ptr;
++ int final_level_no;
++ std::vector<int> fina_level_ptr_v, final_part_ptr_v, final_node_ptr_v;
+  int part_no;
+  int lp = num_threads, cp = p2, ic= p3;
+ 
+- auto *cost = new double[n]();
++
++std::vector<double> cost(n, 0);
+  for (int i = 0; i < n; ++i) {
+   cost[i] = L1_csc->p[i+1] - L1_csc->p[i];
+  }
+ 
+- get_coarse_levelSet_DAG_CSC_tree(n, L1_csc->p, L1_csc->i, L1_csc->stype,
+-   final_level_no,
+-   fina_level_ptr,part_no,
+-   final_part_ptr,final_node_ptr,
+-   lp,cp, ic, cost);
++
++ int nnz = L1_csc->p[n];
++ std::vector<int> DAG_ptr(L1_csc->p, L1_csc->p + n + 1);
++ std::vector<int> DAG_set(L1_csc->i, L1_csc->i + nnz);
++ HDAGG::HDAGG(n, nnz, DAG_ptr, DAG_set, cost, num_threads, final_level_no, fina_level_ptr_v, final_part_ptr_v, final_node_ptr_v, false, false, true);
++                 
++ int *fina_level_ptr, *final_part_ptr, *final_node_ptr;
++ fina_level_ptr = new int[fina_level_ptr_v.size()];
++ for (int i=0; i<fina_level_ptr_v.size(); ++i)
++ 	fina_level_ptr[i] = fina_level_ptr_v[i];
++ final_part_ptr = new int[final_part_ptr_v.size()];
++ for (int i=0; i<final_part_ptr_v.size(); ++i)
++  	final_part_ptr[i] = final_part_ptr_v[i];
++ final_node_ptr = new int[final_node_ptr_v.size()];
++ for (int i=0; i<final_node_ptr_v.size(); ++i)
++ 	final_node_ptr[i] = final_node_ptr_v[i];
+  
+- print_hlevel_set("HLevel set:\n", final_level_no, fina_level_ptr, final_part_ptr, final_node_ptr);
++ 
++ int proc=0, level = 0;
++  for (int i = 0; i < final_level_no; ++i) {
++   for (int j = fina_level_ptr[i]; j < fina_level_ptr[i + 1]; ++j) {
++    for (int k = final_part_ptr[j]; k < final_part_ptr[j + 1]; ++k) {
++     std::cout << final_node_ptr[k] << " "<<proc<<" "<<level<<std::endl;
++    }
++    ++proc;
++   }
++   ++level;
++   proc=0;
++  }
+ 
+  delete []fina_level_ptr;
+  delete []final_part_ptr;
+  delete []final_node_ptr;
+- delete []cost;
+  delete A;
+  delete L1_csc;
+  return 0;
+ }
++

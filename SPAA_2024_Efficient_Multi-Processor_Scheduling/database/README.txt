@@ -1,0 +1,5 @@
+This directory contains the computational DAGs used in our experiments, in a hyperDAG representation. They represent a wide variety of different computational tasks, with some of them in a coarse-grained, others in a fine-grained representation.
+
+The training and tests sets are found within the "used_for_experiments" folder; their naming follows the naming convention in the paper. A detailed description of the file format of these hyperDAGs can be found in the readme file of the algorithms folder. Note that these files follow the "Combine" option in our python configuration script, i.e. the two parts of the input problem (the DAG itself and the parameters describing the machine) are stored in two separate files, and only combined during the execution of the python scripts.
+
+Note that our full hyperDAG database is available on GitHub: https://github.com/Algebraic-Programming/HyperDAG_DB . The hyperDAGs in this online database are in a slightly different format, to ensure extendibility for further problems in the future; the details are explained in the readme files on GitHub.
