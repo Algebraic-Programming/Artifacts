@@ -1,0 +1,43 @@
+{
+    "globalParameters": {
+        "timeLimit": 600,
+        "graphDirectory": "../../../data_set/suite_sparse",
+        "machineDirectory": "../../data/machine_params/machines22",
+        "scheduleDirectory" :"",
+        "outputStatsFile": "../../../sc25-evaluation/SpTrSV_Data/plot_22_reorder/all_run_main_reorder.csv",
+        "outputLogFile": "../../../sc25-evaluation/SpTrSV_Data/plot_22_reorder/log_main_reorder.txt",
+        "outputSchedule": false,
+        "outputDotSchedule": false,
+        "outputSankeySchedule": false
+    },
+    "inputInstances": [
+        {
+            "graphFile": "./graphs/instance_exp_N20_K4_nzP0d2.txt",
+            "machineParamsFile": "./machines/p4_g1_l5.txt"
+        }
+    ],
+    "algorithms": [
+        {
+            "name": "SMFunOriGrowlv2",
+            "run" : true,
+            "parameters": {
+                "maxWeightMedianMultiplier": 20.0,
+                "minSuperstepSize": 20,
+                "syncCostMultiplierMinSuperstepWeight": 1,
+                "syncCostMultiplierParallelCheck": 4,
+                "numThreads": 1
+            }
+        },        
+        {
+            "name": "SMGreedyBspGrowLocalAutoCoresParallel",
+            "run" : true,
+            "parameters": {
+                "minSuperstepSize": 20,
+                "syncCostMultiplierMinSuperstepWeight": 1,
+                "syncCostMultiplierParallelCheck": 4,
+                "numThreads": 1
+            }
+        }
+    ]
+}
+

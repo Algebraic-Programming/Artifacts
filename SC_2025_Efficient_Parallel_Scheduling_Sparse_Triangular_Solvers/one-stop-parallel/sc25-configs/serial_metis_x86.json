@@ -1,0 +1,25 @@
+{
+    "globalParameters": {
+        "timeLimit": 600,
+        "graphDirectory": "../../../data_set/metis",
+        "machineDirectory": "../../data/machine_params/machines22",
+        "scheduleDirectory" :"",
+        "outputStatsFile": "../../../sc25-evaluation/SpTrSV_Data/SC_paper/run_serial_metis.csv",
+        "outputLogFile": "../../../sc25-evaluation/SpTrSV_Data/SC_paper/log_serial_metis.txt",
+        "outputSchedule": false,
+        "outputDotSchedule": false,
+        "outputSankeySchedule": false
+    },
+    "inputInstances": [
+        {
+            "graphFile": "./graphs/instance_exp_N20_K4_nzP0d2.txt",
+            "machineParamsFile": "./machines/p4_g1_l5.txt"
+        }
+    ],
+    "algorithms": [
+        {
+            "name": "Serial",
+            "run" : true            
+        }
+    ]
+}

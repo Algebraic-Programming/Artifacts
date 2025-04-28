@@ -1,0 +1,822 @@
+diff -crB aggregation/CMakeLists.txt tmp/aggregation/CMakeLists.txt
+*** aggregation/CMakeLists.txt	2025-04-24 14:44:29.068399756 +0200
+--- tmp/aggregation/CMakeLists.txt	2025-04-24 16:46:56.089809515 +0200
+***************
+*** 57,63 ****
+  
+  ################################################################################
+  
+! #find_package(OpenMP)
+  if(OpenMP_FOUND)
+      if(APPLE) #TODO: there might be a better support
+          set(OpenMP_CXX_INCLUDE_DIRS  "/usr/local/include/")
+--- 57,63 ----
+  
+  ################################################################################
+  
+! find_package(OpenMP)
+  if(OpenMP_FOUND)
+      if(APPLE) #TODO: there might be a better support
+          set(OpenMP_CXX_INCLUDE_DIRS  "/usr/local/include/")
+diff -crB aggregation/example/CMakeLists.txt tmp/aggregation/example/CMakeLists.txt
+*** aggregation/example/CMakeLists.txt	2025-04-24 14:44:29.071449268 +0200
+--- tmp/aggregation/example/CMakeLists.txt	2025-04-24 16:47:25.259889317 +0200
+***************
+*** 116,122 ****
+--- 116,140 ----
+  endif()
+  
+  
++ find_package(OpenMP)
++ if (OPENMP_FOUND)
++     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
++     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
++     set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
++ endif()
++ 
+  ################################################################################
++ #if(EXISTS "$ENV{SPMPROOT}")
++ #message(STATUS "Examples using SpMP - $ENV{SPMPROOT}.")
++ #target_include_directories(aggregation PRIVATE
++ #        $ENV{SPMPROOT}
++ #        "${CMAKE_CURRENT_SOURCE_DIR}/utils/external/SpMPInterface/includes"
++ #        )
++ #add_definitions(-DSPMP)
++ #else()
++ #message(STATUS "Please defined the SpMP directory using SPMP_ROOT variable - not found")
++ #endif()
++ 
+  # Testing SpTRSV kernel
+  add_executable(Hdagg_SpTRSV
+          SpTRSV_runtime.cpp
+***************
+*** 124,131 ****
+          )
+  target_include_directories(Hdagg_SpTRSV PRIVATE
+          ${Sparse_TRSV_INC}
+          )
+  target_link_libraries(Hdagg_SpTRSV PUBLIC
+          aggregation
+          metis::metis)
+! ################################################################################
+\ No newline at end of file
+--- 142,163 ----
+          )
+  target_include_directories(Hdagg_SpTRSV PRIVATE
+          ${Sparse_TRSV_INC}
++         $ENV{SPMPROOT}
++         "${CMAKE_CURRENT_SOURCE_DIR}/../utils/external/SpMPInterface/includes"
+          )
++ #add_definitions(-DSPMP)
+  target_link_libraries(Hdagg_SpTRSV PUBLIC
+          aggregation
+          metis::metis)
+!         
+! if(OpenMP_FOUND)
+!         target_link_libraries(Hdagg_SpTRSV PRIVATE
+!                 OpenMP::OpenMP_CXX
+!                 )
+!         message(STATUS "we have openmp found")
+! else()
+!         message(STATUS "we dont have openmp found")
+! endif()
+! 
+! 
+! ################################################################################
+diff -crB aggregation/example/SpTRSV_runtime.cpp tmp/aggregation/example/SpTRSV_runtime.cpp
+*** aggregation/example/SpTRSV_runtime.cpp	2025-04-24 14:44:29.071889894 +0200
+--- tmp/aggregation/example/SpTRSV_runtime.cpp	2025-04-24 14:46:31.876859305 +0200
+***************
+*** 4,9 ****
+--- 4,10 ----
+  
+  #include "aggregation/csv_utils.h"
+  #include <iostream>
++ #include <sstream>
+  #include "aggregation/metis_interface.h"
+  #ifdef ENABLE_OPENMP
+  #include <omp.h>
+***************
+*** 15,20 ****
+--- 16,23 ----
+  
+  using namespace sym_lib;
+  
++ extern int input_number_threads;
++ 
+  int main(int argc, char *argv[]) {
+  
+    CSC *Lower_A_CSC, *A = NULLPNTR;
+***************
+*** 22,29 ****
+--- 25,37 ----
+    size_t n, nnz;
+    int nthreads = -1;
+    int *perm;
++   int nr_runs = 100;
+    std::string matrix_name;
+    std::vector<timing_measurement> time_array;
++   
++ #ifdef SPMP
++   std::cout<<"SPMP is active"<<std::endl;
++ #endif
+  
+    if (argc < 2) {
+      PRINT_LOG("Not enough input args, switching to random mode.\n");
+***************
+*** 77,82 ****
+--- 85,95 ----
+    if (argc >= 3) {
+      nthreads = atoi(argv[2]);
+    }
++   input_number_threads = nthreads;
++ 
++   perm = new int[n];
++   for(int i=0; i<n; ++i)
++     perm[i] = i;
+  
+    /// Re-ordering matrix A
+    //    std::cout << "METIS IS NOT ACTIVATED" << std::endl;
+***************
+*** 85,91 ****
+    // We only reorder A since dependency matters more in l-solve.
+    A = make_full(Lower_A_CSC);
+    delete Lower_A_CSC;
+!   metis_perm_general(A, perm);
+    Lower_A_CSC = make_half(A->n, A->p, A->i, A->x);
+    CSC *Lt = transpose_symmetric(Lower_A_CSC, perm);
+    CSC *L1_ord = transpose_symmetric(Lt, NULLPNTR);
+--- 98,104 ----
+    // We only reorder A since dependency matters more in l-solve.
+    A = make_full(Lower_A_CSC);
+    delete Lower_A_CSC;
+!   //metis_perm_general(A, perm);
+    Lower_A_CSC = make_half(A->n, A->p, A->i, A->x);
+    CSC *Lt = transpose_symmetric(Lower_A_CSC, perm);
+    CSC *L1_ord = transpose_symmetric(Lt, NULLPNTR);
+***************
+*** 112,125 ****
+    std::cout << "Starting SpTrSv Runtime analysis" << std::endl;
+  
+    std::vector<std::string> Runtime_headers;
+!   Runtime_headers.emplace_back("Matrix_Name");
+    Runtime_headers.emplace_back("Algorithm");
+!   Runtime_headers.emplace_back("Kernel");
+!   Runtime_headers.emplace_back("Core");
+!   Runtime_headers.emplace_back("Scheduling_Time");
+!   Runtime_headers.emplace_back("Executor_Runtime");
+!   Runtime_headers.emplace_back("nlevel");
+!   Runtime_headers.emplace_back("Profitable");
+  
+    std::string delimiter = "/";
+    size_t matrix_name_start_pos = matrix_name.find(delimiter) + 1;
+--- 125,144 ----
+    std::cout << "Starting SpTrSv Runtime analysis" << std::endl;
+  
+    std::vector<std::string> Runtime_headers;
+!   Runtime_headers.emplace_back("Graph");
+!   Runtime_headers.emplace_back("Machine");
+    Runtime_headers.emplace_back("Algorithm");
+!   Runtime_headers.emplace_back("Permutation");
+!   //Runtime_headers.emplace_back("Kernel");
+!   Runtime_headers.emplace_back("SpTrSV_Runtime");
+!   Runtime_headers.emplace_back("Work_Cost");
+!   Runtime_headers.emplace_back("Base_Comm_Cost");
+!   Runtime_headers.emplace_back("Supersteps");
+!   Runtime_headers.emplace_back("_Base_Buffered_Sending");
+!   Runtime_headers.emplace_back("Base_CostsTotalCommunication");
+!   Runtime_headers.emplace_back("Schedule_Compute_time");
+! 
+!   //Runtime_headers.emplace_back("Profitable");
+  
+    std::string delimiter = "/";
+    size_t matrix_name_start_pos = matrix_name.find(delimiter) + 1;
+***************
+*** 173,227 ****
+    std::vector<bool> bin_pack{true};
+  
+    //"********************* LL Serial  *********************"
+!   Sptrsv_LL_Serial LL_serial(Lower_A_CSR, Lower_A_CSC, NULLPNTR,
+!                              "LL serial"); // seq
+!   auto LL_serial_runtime = LL_serial.evaluate();
+!   y_serial = LL_serial.solution();
+!   copy_vector(0, n, y_serial, y_correct);
+!   std::cout << "Running LL Serial Code - The runtime:"
+!             << LL_serial_runtime.elapsed_time << std::endl;
+!   runtime_csv.addElementToRecord(Mat_name, "Matrix_Name");
+!   runtime_csv.addElementToRecord("Serial", "Algorithm");
+!   runtime_csv.addElementToRecord("LL", "Kernel");
+!   runtime_csv.addElementToRecord(1, "Core");
+!   runtime_csv.addElementToRecord(0, "Scheduling_Time");
+!   runtime_csv.addElementToRecord(LL_serial_runtime.elapsed_time,
+!                                  "Executor_Runtime");
+!   runtime_csv.addElementToRecord(1, "nlevel");
+!   runtime_csv.addElementToRecord(0, "Profitable");
+!   runtime_csv.addRecord();
+  
+    //"********************* LL Levelset *********************"
+!   for (auto &core : Cores) {
+!     SpTrsv_LL_Wavefront LL_lvl_obj(Lower_A_CSR, Lower_A_CSC, y_correct,
+!                                   "LL Levelset ", core);
+!     timing_measurement LL_lvl_runtime;
+!     #ifdef ENABLE_OPENMP
+!  omp_set_num_threads(core);
+! #endif
+!     LL_lvl_runtime = LL_lvl_obj.evaluate();
+!     std::cout << "Running LL Levelset Code with #core: " << core
+!               << " - The runtime:" << LL_lvl_runtime.elapsed_time << std::endl;
+!     int part_no, nlevels;
+!     LL_lvl_obj.getWaveStatistic(nlevels, part_no);
+!     runtime_csv.addElementToRecord(Mat_name, "Matrix_Name");
+!     runtime_csv.addElementToRecord("Wavefront", "Algorithm");
+!     runtime_csv.addElementToRecord("LL", "Kernel");
+!     runtime_csv.addElementToRecord(core, "Core");
+!     runtime_csv.addElementToRecord(LL_lvl_obj.getSchedulingTime(),
+!                                    "Scheduling_Time");
+!     runtime_csv.addElementToRecord(LL_lvl_runtime.elapsed_time,
+!                                    "Executor_Runtime");
+!     runtime_csv.addElementToRecord(nlevels, "nlevel");
+!     double profitable =
+!         (LL_lvl_obj.getSchedulingTime()) /
+!         (LL_serial_runtime.elapsed_time - LL_lvl_runtime.elapsed_time);
+!     runtime_csv.addElementToRecord(profitable, "Profitable");
+  
+!     runtime_csv.addRecord();
+    }
+  #ifdef SPMP
+    //"********************* LL Levelset *********************"
+    for (auto &core : Cores) {
+      SpTrsv_LL_Parallel_Wavefront LL_lvl_obj(CSR_A, Lower_A_CSR, Lower_A_CSC,
+                                             y_correct, "LL Levelset ", core);
+--- 192,278 ----
+    std::vector<bool> bin_pack{true};
+  
+    //"********************* LL Serial  *********************"
+!   timing_measurement serial_runtime_last;
+!   for(int i=0; i<nr_runs; ++i)
+!   {
+!     Sptrsv_LL_Serial LL_serial(Lower_A_CSR, Lower_A_CSC, NULLPNTR,
+!                               "LL serial"); // seq
+!     auto LL_serial_runtime = LL_serial.evaluate();
+!     y_serial = LL_serial.solution();
+!     copy_vector(0, n, y_serial, y_correct);
+!     std::cout << "Running LL Serial Code - The runtime:"
+!               << LL_serial_runtime.elapsed_time << std::endl;
+!     runtime_csv.addElementToRecord(Mat_name, "Graph");
+!     runtime_csv.addElementToRecord("p"+std::to_string(nthreads), "Machine");
+!     runtime_csv.addElementToRecord("Serial_sympiler", "Algorithm");
+!     runtime_csv.addElementToRecord("NONE", "Permutation");
+!     //runtime_csv.addElementToRecord("LL", "Kernel");
+! 
+!     double sptrsv_runtime = LL_serial_runtime.elapsed_time;
+!     std::stringstream stream;
+!     stream << std::fixed << std::setprecision(8) << sptrsv_runtime;
+!     std::string runtime_string = stream.str();
+!     runtime_csv.addElementToRecord(runtime_string,
+!                                   "SpTrSV_Runtime");
+!     runtime_csv.addElementToRecord("", "Work_Cost");
+!     runtime_csv.addElementToRecord("", "Base_Comm_Cost");
+!     runtime_csv.addElementToRecord(1, "Supersteps");
+!     runtime_csv.addElementToRecord("", "_Base_Buffered_Sending");
+!     runtime_csv.addElementToRecord("", "Base_CostsTotalCommunication");
+!     runtime_csv.addElementToRecord(0, "Schedule_Compute_time");
+!     //runtime_csv.addElementToRecord(0, "Profitable");
+!     runtime_csv.addRecord();
+!     serial_runtime_last = LL_serial_runtime;
+!   }
+!   auto LL_serial_runtime = serial_runtime_last;
+  
+    //"********************* LL Levelset *********************"
+!   for(int i=0; i<nr_runs; ++i)
+!   {
+!     for (auto &core : Cores) {
+!       SpTrsv_LL_Wavefront LL_lvl_obj(Lower_A_CSR, Lower_A_CSC, y_correct,
+!                                     "LL Levelset ", core);
+!       timing_measurement LL_lvl_runtime;
+! #ifdef ENABLE_OPENMP
+!       omp_set_num_threads(core);
+!  #endif
+!       LL_lvl_runtime = LL_lvl_obj.evaluate();
+!       std::cout << "Running LL Levelset Code with #core: " << core
+!                 << " - The runtime:" << LL_lvl_runtime.elapsed_time << std::endl;
+!       int part_no, nlevels;
+!       LL_lvl_obj.getWaveStatistic(nlevels, part_no);
+!       runtime_csv.addElementToRecord(Mat_name, "Graph");
+!       runtime_csv.addElementToRecord("p"+std::to_string(core), "Machine");
+!       runtime_csv.addElementToRecord("Wavefront_sympiler", "Algorithm");
+!       runtime_csv.addElementToRecord("NONE", "Permutation");
+!       //runtime_csv.addElementToRecord("LL", "Kernel");
+!       double sptrsv_runtime = LL_lvl_runtime.elapsed_time;
+!       std::stringstream stream;
+!       stream << std::fixed << std::setprecision(8) << sptrsv_runtime;
+!       std::string runtime_string = stream.str();
+!       runtime_csv.addElementToRecord(runtime_string,
+!                                   "SpTrSV_Runtime");
+!       runtime_csv.addElementToRecord("", "Work_Cost");
+!       runtime_csv.addElementToRecord("", "Base_Comm_Cost");
+!       runtime_csv.addElementToRecord(nlevels, "Supersteps");
+!       runtime_csv.addElementToRecord("", "_Base_Buffered_Sending");
+!       runtime_csv.addElementToRecord("", "Base_CostsTotalCommunication");
+! 
+!       long unsigned scheduling_time = (long unsigned) (1000 * LL_lvl_obj.getSchedulingTime());
+!       runtime_csv.addElementToRecord(scheduling_time,
+!                                     "Schedule_Compute_time");
+!       double profitable =
+!           (LL_lvl_obj.getSchedulingTime()) /
+!           (LL_serial_runtime.elapsed_time - LL_lvl_runtime.elapsed_time);
+!       //runtime_csv.addElementToRecord(profitable, "Profitable");
+  
+!       runtime_csv.addRecord();
+!     }
+    }
++   
+  #ifdef SPMP
+    //"********************* LL Levelset *********************"
++   /*std::cout<<"SPMP is active"<<std::endl;
+    for (auto &core : Cores) {
+      SpTrsv_LL_Parallel_Wavefront LL_lvl_obj(CSR_A, Lower_A_CSR, Lower_A_CSC,
+                                             y_correct, "LL Levelset ", core);
+***************
+*** 248,257 ****
+          (LL_serial_runtime.elapsed_time - LL_lvl_runtime.elapsed_time);
+      runtime_csv.addElementToRecord(profitable, "Profitable");
+      runtime_csv.addRecord();
+!   }
+  #endif
+    //"********************* LL Tree + Levelset *********************"
+!   for (auto &core : Cores) {
+      SpTrSv_LL_Tree_Wavefront_No_unPACK LL_lvl_obj(
+          Lower_A_CSR, Lower_A_CSC, y_correct, "LL Tree Levelset ", core);
+      timing_measurement LL_lvl_runtime;
+--- 299,308 ----
+          (LL_serial_runtime.elapsed_time - LL_lvl_runtime.elapsed_time);
+      runtime_csv.addElementToRecord(profitable, "Profitable");
+      runtime_csv.addRecord();
+!   }*/
+  #endif
+    //"********************* LL Tree + Levelset *********************"
+!   /*for (auto &core : Cores) {
+      SpTrSv_LL_Tree_Wavefront_No_unPACK LL_lvl_obj(
+          Lower_A_CSR, Lower_A_CSC, y_correct, "LL Tree Levelset ", core);
+      timing_measurement LL_lvl_runtime;
+***************
+*** 277,329 ****
+          (LL_serial_runtime.elapsed_time - LL_lvl_runtime.elapsed_time);
+      runtime_csv.addElementToRecord(profitable, "Profitable");
+      runtime_csv.addRecord();
+!   }
+    //"********************* LL HDAGG *********************"
+!   for (auto &core : Cores) {
+!     for (auto &&bin : bin_pack) {
+!       SpTrSv_LL_HDAGG LL_lvl_obj(Lower_A_CSR, Lower_A_CSC, y_correct,
+!                                  "LL HDAGG ", core, bin);
+!       timing_measurement LL_lvl_runtime;
+!       #ifdef ENABLE_OPENMP
+!  omp_set_num_threads(core);
+  #endif
+!       LL_lvl_runtime = LL_lvl_obj.evaluate();
+!       if (bin) {
+!         std::cout << "Running LL HDAGG with BIN Code with #core: " << core
+!                   << " - The runtime:" << LL_lvl_runtime.elapsed_time
+!                   << std::endl;
+!       } else {
+!         std::cout << "Running LL HDAGG Code with #core: " << core
+!                   << " - The runtime:" << LL_lvl_runtime.elapsed_time
+!                   << std::endl;
+!       }
+!       int part_no, nlevels;
+!       LL_lvl_obj.getWaveStatistic(nlevels, part_no);
+!       double avg_par = part_no * 1.0 / nlevels;
+!       runtime_csv.addElementToRecord(Mat_name, "Matrix_Name");
+!       if (bin) {
+!         runtime_csv.addElementToRecord("HDAGG_BIN", "Algorithm");
+!       } else {
+!         runtime_csv.addElementToRecord("HDAGG_NO_BIN", "Algorithm");
+!       }
+!       runtime_csv.addElementToRecord("LL", "Kernel");
+!       runtime_csv.addElementToRecord(core, "Core");
+!       runtime_csv.addElementToRecord(LL_lvl_obj.getSchedulingTime(),
+!                                      "Scheduling_Time");
+!       runtime_csv.addElementToRecord(LL_lvl_runtime.elapsed_time,
+!                                      "Executor_Runtime");
+  
+!       runtime_csv.addElementToRecord(nlevels, "nlevel");
+!       double profitable =
+!           (LL_lvl_obj.getSchedulingTime()) /
+!           (LL_serial_runtime.elapsed_time - LL_lvl_runtime.elapsed_time);
+!       runtime_csv.addElementToRecord(profitable, "Profitable");
+! 
+!       runtime_csv.addRecord();
+      }
+    }
+    //"********************* LL Tree HDAGG *********************"
+!   for (auto &core : Cores) {
+      for (auto &&bin : bin_pack) {
+        SpTrSv_LL_Tree_HDAGG LL_lvl_obj(Lower_A_CSR, Lower_A_CSC, y_correct,
+                                        "LL Tree HDAGG ", core, isLfactor, bin);
+--- 328,392 ----
+          (LL_serial_runtime.elapsed_time - LL_lvl_runtime.elapsed_time);
+      runtime_csv.addElementToRecord(profitable, "Profitable");
+      runtime_csv.addRecord();
+!   }*/
+    //"********************* LL HDAGG *********************"
+!   for(int i=0; i<nr_runs; ++i)
+!   {
+!     for (auto &core : Cores) {
+!       for (auto &&bin : bin_pack) {
+!         SpTrSv_LL_HDAGG LL_lvl_obj(Lower_A_CSR, Lower_A_CSC, y_correct,
+!                                   "LL HDAGG ", core, bin);
+!         timing_measurement LL_lvl_runtime;
+! #ifdef ENABLE_OPENMP
+!         omp_set_num_threads(core);
+  #endif
+!         LL_lvl_runtime = LL_lvl_obj.evaluate();
+!         if (bin) {
+!           std::cout << "Running LL HDAGG with BIN Code with #core: " << core
+!                     << " - The runtime:" << LL_lvl_runtime.elapsed_time
+!                     << std::endl;
+!         } else {
+!           std::cout << "Running LL HDAGG Code with #core: " << core
+!                     << " - The runtime:" << LL_lvl_runtime.elapsed_time
+!                     << std::endl;
+!         }
+!         int part_no, nlevels;
+!         LL_lvl_obj.getWaveStatistic(nlevels, part_no);
+!         double avg_par = part_no * 1.0 / nlevels;
+!         runtime_csv.addElementToRecord(Mat_name, "Graph");
+!         runtime_csv.addElementToRecord("p"+std::to_string(core), "Machine");
+!         if (bin) {
+!           runtime_csv.addElementToRecord("HDAGG_BIN", "Algorithm");
+!         } else {
+!           runtime_csv.addElementToRecord("HDAGG_NO_BIN", "Algorithm");
+!         }
+!         runtime_csv.addElementToRecord("NONE", "Permutation");
+!         //runtime_csv.addElementToRecord("LL", "Kernel");
+!         double sptrsv_runtime = LL_lvl_runtime.elapsed_time;
+!         std::stringstream stream;
+!         stream << std::fixed << std::setprecision(8) << sptrsv_runtime;
+!         std::string runtime_string = stream.str();
+!         runtime_csv.addElementToRecord(runtime_string,
+!                                   "SpTrSV_Runtime");
+!         runtime_csv.addElementToRecord("", "Work_Cost");
+!         runtime_csv.addElementToRecord("", "Base_Comm_Cost");
+!         runtime_csv.addElementToRecord(nlevels, "Supersteps");
+!         runtime_csv.addElementToRecord("", "_Base_Buffered_Sending");
+!         runtime_csv.addElementToRecord("", "Base_CostsTotalCommunication");
+!         long unsigned scheduling_time = (long unsigned) (1000 * LL_lvl_obj.getSchedulingTime());
+!         runtime_csv.addElementToRecord(scheduling_time,
+!                                       "Schedule_Compute_time");
+!         double profitable =
+!             (LL_lvl_obj.getSchedulingTime()) /
+!             (LL_serial_runtime.elapsed_time - LL_lvl_runtime.elapsed_time);
+!         //runtime_csv.addElementToRecord(profitable, "Profitable");
+  
+!         runtime_csv.addRecord();
+!       }
+      }
+    }
+    //"********************* LL Tree HDAGG *********************"
+!   /*for (auto &core : Cores) {int
+      for (auto &&bin : bin_pack) {
+        SpTrSv_LL_Tree_HDAGG LL_lvl_obj(Lower_A_CSR, Lower_A_CSC, y_correct,
+                                        "LL Tree HDAGG ", core, isLfactor, bin);
+***************
+*** 363,371 ****
+        runtime_csv.addElementToRecord(profitable, "Profitable");
+        runtime_csv.addRecord();
+      }
+!   }
+    //"********************* LL Tree BFS HDAGG *********************"
+!   for (auto &core : Cores) {
+      for (auto &&bin : {true}) {
+        SpTrSv_LL_Tree_HDAGG_BFS LL_lvl_obj(Lower_A_CSR, Lower_A_CSC, y_correct,
+                                            "LL Tree BFS HDAGG ", core, isLfactor,
+--- 426,434 ----
+        runtime_csv.addElementToRecord(profitable, "Profitable");
+        runtime_csv.addRecord();
+      }
+!   }*/
+    //"********************* LL Tree BFS HDAGG *********************"
+!   /*for (auto &core : Cores) {
+      for (auto &&bin : {true}) {
+        SpTrSv_LL_Tree_HDAGG_BFS LL_lvl_obj(Lower_A_CSR, Lower_A_CSC, y_correct,
+                                            "LL Tree BFS HDAGG ", core, isLfactor,
+***************
+*** 407,415 ****
+        runtime_csv.addElementToRecord(profitable, "Profitable");
+        runtime_csv.addRecord();
+      }
+!   }
+  
+! #ifdef SPMP
+    //"********************* LL Tree BFS HDAGG P2P *********************"
+    for (auto &core : Cores) {
+      for (auto &&bin : {false}) {
+--- 470,478 ----
+        runtime_csv.addElementToRecord(profitable, "Profitable");
+        runtime_csv.addRecord();
+      }
+!   }*/
+  
+! /* #ifdef SPMP
+    //"********************* LL Tree BFS HDAGG P2P *********************"
+    for (auto &core : Cores) {
+      for (auto &&bin : {false}) {
+***************
+*** 453,462 ****
+        runtime_csv.addRecord();
+      }
+    }
+! #endif
+  
+    //"********************* LL LBC *********************"
+!   std::vector<int> P3 = {5000};
+    for (auto core : Cores) {
+      for (auto p3 : P3) {
+        SpTrSv_LL_LBC LL_lvl_obj(Lower_A_CSR, Lower_A_CSC, y_correct,
+--- 516,525 ----
+        runtime_csv.addRecord();
+      }
+    }
+! #endif*/
+  
+    //"********************* LL LBC *********************"
+!   /*std::vector<int> P3 = {5000};
+    for (auto core : Cores) {
+      for (auto p3 : P3) {
+        SpTrSv_LL_LBC LL_lvl_obj(Lower_A_CSR, Lower_A_CSC, y_correct,
+***************
+*** 488,494 ****
+        runtime_csv.addElementToRecord(profitable, "Profitable");
+        runtime_csv.addRecord();
+      }
+!   }
+  
+  #ifdef MKL
+    //"********************* MKL *********************"
+--- 551,557 ----
+        runtime_csv.addElementToRecord(profitable, "Profitable");
+        runtime_csv.addRecord();
+      }
+!   }*/
+  
+  #ifdef MKL
+    //"********************* MKL *********************"
+***************
+*** 553,582 ****
+  #endif
+  #ifdef SPMP
+    //"********************* SpMP *********************"
+!   for (auto &core : Cores) {
+!     #ifdef ENABLE_OPENMP
+!  omp_set_num_threads(core);
+  #endif
+!     SpTrsv_LL_SpMP LL_lvl_obj(CSR_A, Lower_A_CSR, Lower_A_CSC, y_correct,
+!                               "LL SpMP", core); // seq
+!     auto LL_lvl_runtime = LL_lvl_obj.evaluate();
+!     LL_lvl_runtime = LL_lvl_obj.evaluate();
+!     std::cout << "Running LL SpMP Code with #core: " << core
+!               << " - The runtime:" << LL_lvl_runtime.elapsed_time << std::endl;
+!     runtime_csv.addElementToRecord(Mat_name, "Matrix_Name");
+!     runtime_csv.addElementToRecord("SpMP", "Algorithm");
+!     runtime_csv.addElementToRecord("LL", "Kernel");
+!     runtime_csv.addElementToRecord(core, "Core");
+!     runtime_csv.addElementToRecord(LL_lvl_obj.getSchedulingTime(),
+!                                    "Scheduling_Time");
+!     runtime_csv.addElementToRecord(LL_lvl_runtime.elapsed_time,
+!                                    "Executor_Runtime");
+!     runtime_csv.addElementToRecord(LL_lvl_obj.getNumberOfP2P(), "nlevel");
+!     double profitable =
+!         (LL_lvl_obj.getSchedulingTime()) /
+!         (LL_serial_runtime.elapsed_time - LL_lvl_runtime.elapsed_time);
+!     runtime_csv.addElementToRecord(profitable, "Profitable");
+!     runtime_csv.addRecord();
+    }
+  #endif
+  
+--- 616,660 ----
+  #endif
+  #ifdef SPMP
+    //"********************* SpMP *********************"
+!   for(int i=0; i<nr_runs; ++i)
+!   {
+!     for (auto &core : Cores) {
+! #ifdef ENABLE_OPENMP
+!       omp_set_num_threads(core);
+  #endif
+!       SpTrsv_LL_SpMP LL_lvl_obj(CSR_A, Lower_A_CSR, Lower_A_CSC, y_correct,
+!                                 "LL SpMP", core); // seq
+!       timing_measurement LL_lvl_runtime;
+!       LL_lvl_runtime = LL_lvl_obj.evaluate();
+!       std::cout << "Running LL SpMP Code with #core: " << core
+!                 << " - The runtime:" << LL_lvl_runtime.elapsed_time << std::endl;
+!       runtime_csv.addElementToRecord(Mat_name, "Graph");
+!       runtime_csv.addElementToRecord("p"+std::to_string(core), "Machine");
+!       runtime_csv.addElementToRecord("SpMP", "Algorithm");
+!       runtime_csv.addElementToRecord("NONE", "Permutation");
+!       //runtime_csv.addElementToRecord("LL", "Kernel");
+!       double sptrsv_runtime = LL_lvl_runtime.elapsed_time;
+!       std::stringstream stream;
+!       stream << std::fixed << std::setprecision(8) << sptrsv_runtime;
+!       std::string runtime_string = stream.str();
+!       runtime_csv.addElementToRecord(runtime_string,
+!                                   "SpTrSV_Runtime");
+! 
+!       runtime_csv.addElementToRecord("", "Work_Cost");
+!       runtime_csv.addElementToRecord("", "Base_Comm_Cost");
+!       runtime_csv.addElementToRecord((unsigned)LL_lvl_obj.getNumberOfP2P(), "Supersteps");
+!       runtime_csv.addElementToRecord("", "_Base_Buffered_Sending");
+!       runtime_csv.addElementToRecord("", "Base_CostsTotalCommunication");
+!       long unsigned scheduling_time = (long unsigned) (1000 * LL_lvl_obj.getSchedulingTime());
+!       runtime_csv.addElementToRecord(scheduling_time,
+!                                     "Schedule_Compute_time");
+! 
+!       double profitable =
+!           (LL_lvl_obj.getSchedulingTime()) /
+!           (LL_serial_runtime.elapsed_time - LL_lvl_runtime.elapsed_time);
+!       //runtime_csv.addElementToRecord(profitable, "Profitable");
+!       runtime_csv.addRecord();
+!     }
+    }
+  #endif
+  
+Only in aggregation/: .git
+Only in aggregation/: .github
+Only in aggregation/: .gitignore
+diff -crB aggregation/include/aggregation/FusionDemo.h tmp/aggregation/include/aggregation/FusionDemo.h
+*** aggregation/include/aggregation/FusionDemo.h	2025-04-24 14:44:29.073743277 +0200
+--- tmp/aggregation/include/aggregation/FusionDemo.h	2025-04-24 14:46:31.878342216 +0200
+***************
+*** 12,17 ****
+--- 12,18 ----
+  #include "PAPIWrapper.h"
+  #endif
+  
++ extern int input_number_threads;
+  
+  namespace sym_lib{
+   class FusionDemo {
+***************
+*** 60,65 ****
+--- 61,67 ----
+    double redundantNNZ(){ return redundant_nnz_;}
+    double *solution(){ return x_;}
+    timing_measurement evaluate();
++   void flush_cache(const unsigned proc_num);
+  
+    void set_num_test(int nt){num_test_=nt;};
+    void set_num_threads(int nt){num_threads_=nt;};
+Only in tmp/aggregation/: lib
+diff -crB aggregation/README.md tmp/aggregation/README.md
+*** aggregation/README.md	2025-04-24 14:44:29.070744434 +0200
+--- tmp/aggregation/README.md	2025-04-24 14:46:31.871755173 +0200
+***************
+*** 50,52 ****
+--- 50,57 ----
+  The example directory shows how to call LBC API and iterate over
+  the created partitioning. For more examples on how LBC is used for
+  making loops with sparse dependencies parallel.
++ 
++ ## SPMP
++ ```bash
++ export SPMPROOT="/home/raphael/Documents/notes/sympiler_aggregation_with_spmp/SpMP"
++ ```
+Only in tmp/aggregation/: run_all_matrices.py
+Only in tmp/aggregation/: SpMP
+diff -crB aggregation/src/CMakeLists.txt tmp/aggregation/src/CMakeLists.txt
+*** aggregation/src/CMakeLists.txt	2025-04-24 14:44:29.076707023 +0200
+--- tmp/aggregation/src/CMakeLists.txt	2025-04-24 14:46:31.884181344 +0200
+***************
+*** 42,59 ****
+          metis::metis
+          )
+  
+! 
+! add_library(aggregationShared
+!         ${HDAGG_SRCFILES}
+!         )
+! target_include_directories(aggregationShared PRIVATE
+!         ${LBC_INC}
+!         )
+! target_link_libraries(aggregationShared PRIVATE
+!         lbcShared
+!         sym_amd
+!         metis::metis
+!         )
+  ### Find Intel MKL if available - it works with oneAPI
+  if(HDAGG_WITH_MKL)
+      find_package(MKL OPTIONAL_COMPONENTS)
+--- 42,58 ----
+          metis::metis
+          )
+  
+! #add_library(aggregationShared
+! #        ${HDAGG_SRCFILES}
+! #        )
+! #target_include_directories(aggregationShared PRIVATE
+! #        ${LBC_INC}
+! #        )
+! #target_link_libraries(aggregationShared PRIVATE
+! #        lbcShared
+! #        sym_amd
+! #        metis::metis
+! #        )
+  ### Find Intel MKL if available - it works with oneAPI
+  if(HDAGG_WITH_MKL)
+      find_package(MKL OPTIONAL_COMPONENTS)
+***************
+*** 117,120 ****
+  if(OpenMP_FOUND)
+  target_link_libraries(lbc PRIVATE OpenMP::OpenMP_CXX)
+  target_link_libraries(aggregation PRIVATE OpenMP::OpenMP_CXX)
+! endif()
+\ No newline at end of file
+--- 116,119 ----
+  if(OpenMP_FOUND)
+  target_link_libraries(lbc PRIVATE OpenMP::OpenMP_CXX)
+  target_link_libraries(aggregation PRIVATE OpenMP::OpenMP_CXX)
+! endif()
+diff -crB aggregation/utils/FusionDemo.cpp tmp/aggregation/utils/FusionDemo.cpp
+*** aggregation/utils/FusionDemo.cpp	2025-04-24 14:44:29.078426965 +0200
+--- tmp/aggregation/utils/FusionDemo.cpp	2025-04-24 14:46:31.885302900 +0200
+***************
+*** 12,17 ****
+--- 12,19 ----
+  #include "aggregation/metis_interface.h"
+  #endif
+  
++ int input_number_threads;
++ 
+  namespace sym_lib{
+  
+   FusionDemo::FusionDemo():L1_csr_(NULLPNTR), L1_csc_(NULLPNTR),
+***************
+*** 19,25 ****
+                            A_csr_(NULLPNTR),A_csc_(NULLPNTR),
+                            x_(NULLPNTR),
+                            x_in_(NULLPNTR), correct_x_(NULLPNTR){
+!   num_test_=5;
+    redundant_nodes_=0;
+  #ifdef PROFILE
+    pw_ = NULLPNTR;
+--- 21,27 ----
+                            A_csr_(NULLPNTR),A_csc_(NULLPNTR),
+                            x_(NULLPNTR),
+                            x_in_(NULLPNTR), correct_x_(NULLPNTR){
+!   num_test_=1;
+    redundant_nodes_=0;
+  #ifdef PROFILE
+    pw_ = NULLPNTR;
+***************
+*** 83,93 ****
+    analysis_time_.measure_elapsed_time();
+    for (int i = 0; i < num_test_; ++i) {
+     setting_up();
+  #ifdef PROFILE
+     if(pw_)
+      pw_->begin_profiling();
+  #endif
+!    timing_measurement t1 = fused_code();
+  #ifdef PROFILE
+     if(pw_)
+      pw_->finish_profiling();
+--- 85,100 ----
+    analysis_time_.measure_elapsed_time();
+    for (int i = 0; i < num_test_; ++i) {
+     setting_up();
++    timing_measurement t1 = fused_code();
++    setting_up();
++    t1 = fused_code();
++    setting_up();
+  #ifdef PROFILE
+     if(pw_)
+      pw_->begin_profiling();
+  #endif
+!   //  flush_cache(input_number_threads);
+!    t1 = fused_code();
+  #ifdef PROFILE
+     if(pw_)
+      pw_->finish_profiling();
+***************
+*** 156,159 ****
+    PRINT_CSV(num_threads);
+   }
+  
+! }
+--- 163,177 ----
+    PRINT_CSV(num_threads);
+   }
+  
+!  void FusionDemo::flush_cache(const unsigned proc_num) {
+!     unsigned long long flash_size = ((unsigned long long) proc_num) * 2 * 1024 * 1024;
+!     long* flash = new long[flash_size];
+! 
+! #pragma omp parallel for schedule(auto)
+!     for (unsigned long long i = 0; i < flash_size; i++) {
+!         flash[i] = rand();
+!     }
+!     delete flash;
+!  }
+! 
+! }
+\ No newline at end of file

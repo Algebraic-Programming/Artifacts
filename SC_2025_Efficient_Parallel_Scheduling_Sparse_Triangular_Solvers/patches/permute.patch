@@ -1,0 +1,72 @@
+diff -crB aggregation/example/SpTRSV_runtime.cpp aggregation_perm/example/SpTRSV_runtime.cpp
+*** aggregation/example/SpTRSV_runtime.cpp	2024-03-10 01:25:47.000000000 +0100
+--- aggregation_perm/example/SpTRSV_runtime.cpp	2025-04-23 16:58:15.378179000 +0200
+***************
+*** 94,100 ****
+    Lower_A_CSR = csc_to_csr(Lower_A_CSC);
+    delete Lt;
+    delete A;
+!   delete[] perm;
+  #else
+    CSC *tmp =
+        make_half(Lower_A_CSC->n, Lower_A_CSC->p, Lower_A_CSC->i, Lower_A_CSC->x);
+--- 94,100 ----
+    Lower_A_CSR = csc_to_csr(Lower_A_CSC);
+    delete Lt;
+    delete A;
+!   //delete[] perm;
+  #else
+    CSC *tmp =
+        make_half(Lower_A_CSC->n, Lower_A_CSC->p, Lower_A_CSC->i, Lower_A_CSC->x);
+***************
+*** 105,110 ****
+--- 105,117 ----
+  
+    nnz = Lower_A_CSC->nnz;
+  
++   std::string permfile = (matrix_name.size() >= 4 && matrix_name.compare(matrix_name.size()-4, 4, ".mtx")==0 ) ?
++                          matrix_name.substr(0, matrix_name.size()-4)+"_metis.mtx" : matrix_name+"_metis";
++   
++   CSC_to_mtx(permfile, Lower_A_CSC);
++ 
++   return 0;
++ 
+    bool isLfactor = false;
+  
+    double *y_serial, *y_correct = new double[n];
+Only in aggregation_perm: .git
+Only in aggregation_perm: lib
+diff -crB aggregation/utils/sparse_io.cpp aggregation_perm/utils/sparse_io.cpp
+*** aggregation/utils/sparse_io.cpp	2024-03-10 01:25:47.000000000 +0100
+--- aggregation_perm/utils/sparse_io.cpp	2025-04-23 15:41:36.892599000 +0200
+***************
+*** 72,84 ****
+    mm_set_matrix(&matcode);
+    mm_set_coordinate(&matcode);
+    mm_set_real(&matcode);
+  
+    mm_write_banner(fp, matcode);
+    mm_write_mtx_crd_size(fp, A->m, A->n, A->nnz);
+  
+    for (int i = 0; i < A->n; i++)
+     for (int j = A->p[i]; j < A->p[i + 1]; j++)
+!     fprintf(fp, "%d %d %10.3g\n", A->i[j] + 1, i + 1, A->x[j]);
+    fclose(fp);
+   }
+  
+--- 72,85 ----
+    mm_set_matrix(&matcode);
+    mm_set_coordinate(&matcode);
+    mm_set_real(&matcode);
++   mm_set_symmetric(&matcode);
+  
+    mm_write_banner(fp, matcode);
+    mm_write_mtx_crd_size(fp, A->m, A->n, A->nnz);
+  
+    for (int i = 0; i < A->n; i++)
+     for (int j = A->p[i]; j < A->p[i + 1]; j++)
+!     fprintf(fp, "%d %d %f\n", A->i[j] + 1, i + 1, A->x[j]);
+    fclose(fp);
+   }
+  
+Only in aggregation_perm: .vscode

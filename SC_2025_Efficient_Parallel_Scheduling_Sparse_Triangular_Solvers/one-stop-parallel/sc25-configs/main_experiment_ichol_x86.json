@@ -1,0 +1,42 @@
+{
+    "globalParameters": {
+        "timeLimit": 600,
+        "graphDirectory": "../../../data_set/ichol",
+        "machineDirectory": "../../data/machine_params/machines22",
+        "scheduleDirectory" :"",
+        "outputStatsFile": "../../../sc25-evaluation/SpTrSV_Data/SC_paper/all_run_ichol.csv",
+        "outputLogFile": "../../../sc25-evaluation/SpTrSV_Data/SC_paper/log_ichol.txt",
+        "outputSchedule": false,
+        "outputDotSchedule": false,
+        "outputSankeySchedule": false
+    },
+    "inputInstances": [
+        {
+            "graphFile": "./graphs/instance_exp_N20_K4_nzP0d2.txt",
+            "machineParamsFile": "./machines/p4_g1_l5.txt"
+        }
+    ],
+    "algorithms": [
+        {
+            "name": "SMFunOriGrowlv2",
+            "run" : true,
+            "parameters": {
+                "maxWeightMedianMultiplier": 20.0,
+                "minSuperstepSize": 20,
+                "syncCostMultiplierMinSuperstepWeight": 1,
+                "syncCostMultiplierParallelCheck": 4,
+                "numThreads": 1
+            }
+        },        
+        {
+            "name": "SMGreedyBspGrowLocalAutoCoresParallel",
+            "run" : true,
+            "parameters": {
+                "minSuperstepSize": 20,
+                "syncCostMultiplierMinSuperstepWeight": 1,
+                "syncCostMultiplierParallelCheck": 4,
+                "numThreads": 1
+            }
+        }
+    ]
+}
