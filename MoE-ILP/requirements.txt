@@ -1,0 +1,8 @@
+numpy==1.26.4
+matplotlib==3.10.3
+
+coptpy==7.1.7
+
+python-dotenv==1.2.1
+dotenv==0.9.9
+PyYAML==6.0.3

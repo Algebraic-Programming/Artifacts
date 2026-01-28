@@ -1,0 +1,89 @@
+pipeline:
+  # scripts to run, in order
+  steps:
+    - name: extract_hyperedges
+      script: "./extract_hyperedges.py"
+      args:
+        config: "./pipeline.yaml"   # pass same yaml to the script
+    - name: extract_pairs
+      script: "./extract_pairs.py"
+      args:
+        config: "./pipeline.yaml" 
+    # - name: expert_statistics
+    #   script: "./expert_statistics.py"
+    #   args: { config: "./pipeline.yaml" }
+    - name: run_ilp
+      script: "./run_ilp.py"
+      args:
+        config: "./pipeline.yaml"
+
+extract_hyperedge:
+  input_path: "${INPUT_PATH}"
+  k: 6
+  ignore_negatives: true
+  as_tuples: false
+  out_dir: "hyperedges_k8_per_layer"
+  force : true
+  min_freq: 1
+  file_prefix: "layer"
+  zero_pad: 2
+  skip_empty: true
+  debug: false
+
+extract_pairs:
+  input_pattern: "hyperedges_k8_per_layer/layer_*.csv"
+  output_dir: "pairs"
+  force: false
+  valid_file_regex: "^layer_\\d+\\.csv$"
+  experts_col: "experts"
+  frequency_col: "frequency"
+  input_encoding: "utf-8-sig"
+  output_encoding: "utf-8"
+
+expert_statistics:
+  input_path: "${INPUT_PATH}"
+  out_dir: "outputs"          # where PNGs go
+  method: "dict"              # "dict" or "fast"
+  max_id: 63                  # only used for method="fast"
+  probs: false
+  only_probs: false
+  cluster: "both"             # none|rows|cols|both
+  order: "pca"            # fiedler|pca
+  pairs: ""                   # optional: "1:2,2:3"
+  max_ticks: 20
+  fontsize: 7
+  force: false                # if false and outputs exist -> skip
+
+ilp:
+  pairs_pattern: "pairs/layer_*_pairs.csv"
+  # transitions_folder: "outputs_hyperedge_groups_intersection"  # optional
+
+  solutions_dir: "solutions"
+  base_file_name: "solutions/partitioning_experts_mla_pairs"
+
+  # skip behavior
+  force: false
+
+  # instanceParameter fields
+  num_partitions: 6
+  objective: "LAMBDA"          # LAMBDA | FEASABILITY | HRELATION | LATENCY | WORKLOAD_BALANCE
+
+  memory_bound: 27
+  time_limit: 24               # hours
+  layer_threshold: 10
+  per_layer_top_q: 0.98
+
+  cost_mla: 1
+  eps: 1.0e-4
+  load_threshold: 0.3
+
+  lb_mla: 1
+  ub_mla: 3
+  max_mlas_in_partition: 3
+  next_mla: true
+
+  min_freq_trans: 2000
+  per_trans_top_q: 0.90
+  weight_trans: 0.2
+
+  initial_solution_file: ""

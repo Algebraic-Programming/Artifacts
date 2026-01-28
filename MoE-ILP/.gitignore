@@ -1,0 +1,18 @@
+# --- Python cache ---
+__pycache__/
+**/__pycache__/
+*.py[cod]
+venv/
+
+# --- Generated / output folders ---
+hyperedges_k8_per_layer/
+pairs/
+outputs/
+solutions/
+
+# --- editor & OS junk ---
+.vscode/
+.idea/
+.DS_Store
+
+.test310
