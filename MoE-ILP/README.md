@@ -1,3 +1,4 @@
+![Python version](https://img.shields.io/badge/python-3.10-blue.svg)
 # MoE Hypergraph Pipeline and ILP Optimization
 
 This repository implements an end-to-end pipeline for analyzing Mixture-of-Experts (MoE) routing data, constructing hypergraphs and pairwise interaction graphs, and solving an Integer Linear Program (ILP) for expert partitioning under memory and MLA constraints.
