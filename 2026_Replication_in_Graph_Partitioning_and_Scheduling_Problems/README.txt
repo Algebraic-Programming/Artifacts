@@ -27,7 +27,7 @@ For partitioning, there are four datasets.
 
 - Two of them originate from the SuiteSparse sparse matrix collection available at https://sparse.tamu.edu/. OneStopParallel can directly read these inputs; the corresponding SpMV hypergraph model is determined by the file extension.
 
-- The other two datasets originate from Mixture of Experts LLM serving, and were created as discussed in the paper. We directly upload these hypergraphs here in the MoE_dataset subdirectory, since this benchmark is one of the new contributions of the paper. The hypergraphs here are in a .hmetis hypergraph format, and can also be directly read by OSP.
+- The other two datasets originate from Mixture of Experts LLM serving, and were created as discussed in the paper, from the data available for the paper "Orders in Chaos: Enhancing Large-Scale MoE LLM Serving with Data Movement Forecasting", by Zhongkai Yu, Yue Guan, Zihao Yu, Chenyang Zhou, Zhengding Hu, Shuyi Pei, Yangwook Kang, Yufei Ding, and Po-An Tsai, available as arXiv preprint arXiv:2510.05497 (2025). We directly upload these hypergraphs here in the MoE_dataset subdirectory, since this benchmark is one of the new contributions of the paper. The hypergraphs here are in a .hmetis hypergraph format, and can also be directly read by OSP.
 
 For scheduling, there are three datasets:
 
