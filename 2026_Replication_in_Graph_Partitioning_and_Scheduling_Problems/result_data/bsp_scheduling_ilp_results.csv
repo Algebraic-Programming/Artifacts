@@ -1,0 +1,27 @@
+Instance,P,G,L,Steps,Cost_recomp,Cost_standard,Gap_recomp,Gap_standard,Incomplete_recomp,Incomplete_standard,Is Optimal_recomp,Is Optimal_standard,Time Limit (s)_recomp,Time Limit (s)_standard,Used Supersteps_recomp,Used Supersteps_standard,Absolute_Reduction,Reduction_%
+bicgstab,p2,g4,l5,steps7,58,60,0.0000%,0.0000%,False,False,True,True,7200,7200,2,3,2.0,3.3333333333333335
+bicgstab,p4,g4,l5,steps7,45,N/A,22.3650%,N/A,False,True,False,False,7200,7200,2,3,,
+exp_N4_K2_nzP0d5,p2,g4,l5,steps7,54,62,0.0000%,0.0000%,False,False,True,True,7200,7200,2,3,8.0,12.903225806451612
+exp_N4_K2_nzP0d5,p4,g4,l5,steps7,39,N/A,15.4074%,N/A,False,True,False,False,7200,N/A,2,3,,
+exp_N5_K3_nzP0d4,p2,g4,l5,steps7,83,101,9.0863%,20.2999%,False,False,False,False,7200,7200,2,4,18.0,17.82178217821782
+exp_N5_K3_nzP0d4,p4,g4,l5,steps7,69,102,41.2275%,52.2059%,False,False,False,False,7200,7200,3,5,33.0,32.35294117647059
+exp_N6_K4_nzP0d25,p2,g4,l5,steps7,88,N/A,14.9582%,N/A,False,True,False,False,7200,7200,2,4,,
+exp_N6_K4_nzP0d25,p4,g4,l5,steps7,67,116,37.4035%,57.5177%,False,False,False,False,7200,7200,2,2,49.0,42.241379310344826
+k-NN_3_gyro_m,p2,g4,l5,steps7,104,N/A,25.7202%,N/A,False,True,False,False,7200,7200,2,3,,
+k-NN_3_gyro_m,p4,g4,l5,steps7,103,109,60.1665%,48.4131%,False,False,False,False,7200,7200,2,3,6.0,5.5045871559633035
+k-means,p2,g4,l5,steps7,47,N/A,0.0000%,N/A,False,True,True,False,7200,7200,1,2,,
+k-means,p4,g4,l5,steps7,45,48,0.0000%,0.0000%,False,False,True,True,7200,7200,2,2,3.0,6.25
+kNN_N4_K3_nzP0d5,p2,g4,l5,steps7,62,N/A,0.0000%,N/A,False,True,True,False,7200,7200,2,3,,
+kNN_N4_K3_nzP0d5,p4,g4,l5,steps7,47,70,23.8540%,36.7857%,False,False,False,False,7200,7200,2,4,23.0,32.857142857142854
+kNN_N5_K3_nzP0d3,p2,g4,l5,steps7,71,N/A,8.2746%,N/A,False,True,False,False,7200,7200,1,3,,
+kNN_N5_K3_nzP0d3,p4,g4,l5,steps7,49,89,28.4533%,50.5618%,False,False,False,False,7200,7200,2,7,40.0,44.9438202247191
+kNN_N6_K4_nzP0d2,p2,g4,l5,steps7,93,N/A,18.3369%,N/A,False,True,False,False,7200,7200,2,4,,
+kNN_N6_K4_nzP0d2,p4,g4,l5,steps7,72,104,40.9109%,50.4512%,False,False,False,False,7200,7200,3,6,32.0,30.76923076923077
+pregel,p2,g4,l5,steps7,79,N/A,0.0000%,N/A,False,True,True,False,7200,N/A,1,2,,
+pregel,p4,g4,l5,steps7,61,78,0.0000%,15.3846%,False,False,True,False,7200,7200,1,3,17.0,21.794871794871796
+spmv_N10_nzP0d25,p2,g4,l5,steps7,66,77,0.0000%,0.0000%,False,False,True,True,7200,7200,1,2,11.0,14.285714285714285
+spmv_N10_nzP0d25,p4,g4,l5,steps7,37,49,0.0000%,0.0000%,False,False,True,True,7200,7200,1,2,12.0,24.489795918367346
+spmv_N6_nzP0d4,p2,g4,l5,steps7,41,52,0.0000%,0.0000%,False,False,True,True,7200,7200,1,2,11.0,21.153846153846153
+spmv_N6_nzP0d4,p4,g4,l5,steps7,28,37,0.0000%,0.0000%,False,False,True,True,7200,7200,1,2,9.0,24.324324324324326
+spmv_N7_nzP0d35,p2,g4,l5,steps7,46,57,0.0000%,0.0000%,False,False,True,True,7200,7200,1,2,11.0,19.298245614035086
+spmv_N7_nzP0d35,p4,g4,l5,steps7,27,39,0.0000%,0.0000%,False,False,True,True,7200,7200,1,2,12.0,30.76923076923077
